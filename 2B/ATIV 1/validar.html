@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Infinity Bank - Card Guard</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+    background-color: #0f172a;
+    font-family: 'Monaco', monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.card {
+    background: #ffffff;
+    width: 450px;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.header h2 { margin: 0; color: #1e293b; letter-spacing: 1px; }
+.header p { color: #64748b; font-size: 12px; margin-bottom: 20px; }
+
+.input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+input {
+    padding: 15px;
+    font-size: 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 4px;
+    text-align: center;
+}
+
+button {
+    padding: 12px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.painel-info {
+    display: none;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 20px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.info-box {
+    background: #f8fafc;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.label { font-size: 10px; color: #94a3b8; text-transform: uppercase; }
+.value { font-size: 14px; font-weight: bold; color: #1e293b; display: block; }
+
+.valido { color: #16a34a !important; }
+.invalido { color: #dc2626 !important; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="header">
+            <h2>Card Guard</h2>
+            <p>Validador de Segurança ISO/IEC 7812</p>
+        </div>
+
+        <div class="input-container">
+            <input type="text" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19">
+            <button onclick="analisarCartao()">Analisar Cartão</button>
+        </div>
+
+        <div id="painelInfo" class="painel-info">
+        </div>
+    </div>
+
+    <script src="script.js">
+        function analisarCartao() {
+    const rawNumber = document.getElementById('cardNumber').value;
+    const cleanNumber = rawNumber.replace(/\D/g, ''); 
+    const painel = document.getElementById('painelInfo');
+
+    if (cleanNumber.length < 13 || cleanNumber.length > 16) {
+        alert("O número deve ter entre 13 e 16 dígitos.");
+        return;
+    }
+
+    const eValido = validarLuhn(cleanNumber);
+    const info = extrairInfo(cleanNumber);
+
+    painel.style.display = 'block';
+    painel.innerHTML = `
+        <div class="info-grid">
+            <div class="info-box">
+                <span class="label">Status de Integridade</span>
+                <span class="value ${eValido ? 'valido' : 'invalido'}">
+                    ${eValido ? '● MATEMATICAMENTE VÁLIDO' : '● FALHA NA VALIDAÇÃO'}
+                </span>
+            </div>
+            <div class="info-box">
+                <span class="label">Bandeira (IIN)</span>
+                <span class="value">${info.bandeira}</span>
+            </div>
+            <div class="info-box">
+                <span class="label">Setor Industrial</span>
+                <span class="value">${info.setor}</span>
+            </div>
+            <div class="info-box">
+                <span class="label">Dígito Identificador</span>
+                <span class="value">MII: ${cleanNumber[0]}</span>
+            </div>
+        </div>
+    `;
+}
+
+
+function validarLuhn(numero) {
+    let soma = 0;
+    let deveDobrar = false;
+
+
+    for (let i = numero.length - 1; i >= 0; i--) {
+        let digito = parseInt(numero.charAt(i));
+
+        if (deveDobrar) {
+            digito *= 2;
+            if (digito > 9) digito -= 9;
+        }
+
+        soma += digito;
+        deveDobrar = !deveDobrar;
+    }
+
+    return (soma % 10) === 0;
+}
+
+function extrairInfo(numero) {
+    const primeiroDigito = numero[0];
+    let setor = "Outros";
+    let bandeira = "Desconhecida";
+
+
+    const setores = {
+        '1': 'Linhas Aéreas',
+        '2': 'Linhas Aéreas / Outros',
+        '3': 'Viagens e Entretenimento (Amex/Diners)',
+        '4': 'Instituições Financeiras (Visa)',
+        '5': 'Instituições Financeiras (Mastercard)',
+        '6': 'Bancário e Comércio (Maestro/Discover)',
+        '7': 'Indústria de Petróleo',
+        '8': 'Telecomunicações',
+        '9': 'Designação Nacional'
+    };
+    setor = setores[primeiroDigito] || "Setor não mapeado";
+
+    if (numero.startsWith('4')) bandeira = "VISA";
+    else if (numero.startsWith('51') || numero.startsWith('55')) bandeira = "MASTERCARD";
+    else if (numero.startsWith('34') || numero.startsWith('37')) bandeira = "AMERICAN EXPRESS";
+    else if (numero.startsWith('6011')) bandeira = "DISCOVER";
+    else if (numero.startsWith('30')) bandeira = "DINERS CLUB";
+
+    return { setor, bandeira };
+}
+    </script>
+</body>
+</html>
